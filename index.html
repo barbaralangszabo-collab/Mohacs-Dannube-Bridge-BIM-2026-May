@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Danube Bridge at Mohács — BIM for Bridges</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --steel:#1e3a8a;
+      --orange:#f97316;
+      --bg:#f0f9ff;
+      --surface:#ffffff;
+      --slate:#0f172a;
+      --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+
+      --problem-bg:#fff7ed;
+      --problem-bd:#fdba74;
+      --problem-tx:#9a3412;
+
+      --choice-bg:#eff6ff;
+      --choice-bd:#93c5fd;
+      --choice-tx:#1e3a8a;
+
+      --wrong-bg:#fee2e2;
+      --wrong-bd:#fecaca;
+      --wrong-tx:#991b1b;
+
+      --good-bg:#dcfce7;
+      --good-bd:#a7f3d0;
+      --good-tx:#166534;
+    }
+
+    body{
+      font-family: "Archivo", sans-serif;
+      background: var(--bg);
+      color: var(--steel);
+      font-size: 1.12rem;
+      line-height: 1.7;
+    }
+
+    /* Wider + lean hero */
+    .hero{
+      height: 280px; /* wider/taller */
+      position: relative;
+      overflow: hidden;
+      border-bottom: 10px solid var(--orange);
+    }
+    .hero-overlay{
+      position:absolute; inset:0;
+      background: linear-gradient(to bottom, rgba(30,58,138,.92), rgba(30,58,138,.72), rgba(30,58,138,.22));
+      display:flex; align-items:flex-end; padding:18px 14px;
+    }
+    .hero-title{ text-shadow:0 10px 30px rgba(0,0,0,.35); }
+
+    .card{
+      background: var(--surface);
+      border-radius: 20px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 14px 34px rgba(2,6,23,.08);
+    }
+
+    .nav-btn{
+      padding: 9px 14px;
+      border-radius: 14px;
+      font-weight: 900;
+      transition: all .2s ease;
+      background: white;
+      border: 2px solid #e2e8f0;
+      color: var(--slate);
+      font-size: 1.02rem;
+    }
+    .nav-btn:hover{ border-color:#93c5fd; background:#eff6ff; }
+    .nav-btn.active{ background: var(--steel); color: white; border-color: var(--steel); }
+
+    .hidden{ display:none; }
+    .fade-in{ animation: fadeIn .22s ease-out; }
+    @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+    /* Accordion */
+    details{ border: 2px solid #dbeafe; border-radius: 16px; background:white; overflow:hidden; }
+    summary{
+      cursor:pointer; user-select:none; list-style:none;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:12px 14px; font-weight:900; color: var(--slate);
+    }
+    summary::-webkit-details-marker{ display:none; }
+    .acc-icon{ font-weight:900; font-size:1.35rem; color: var(--orange); transition: transform .12s ease; }
+    details[open] .acc-icon{ transform: rotate(45deg); }
+    .acc-body{ padding:0 14px 14px; color: var(--slate); font-weight:650; }
+
+    /* Highlights */
+    .kw{
+      background:#ffedd5; color:#9a3412; padding:.05rem .38rem; border-radius:.5rem;
+      font-weight:900; border:1px solid rgba(249,115,22,.35); white-space:nowrap;
+    }
+    .ph{
+      background:#dbeafe; color:#1e3a8a; padding:.05rem .38rem; border-radius:.5rem;
+      font-weight:900; border:1px solid rgba(59,130,246,.25); white-space:nowrap;
+    }
+
+    .pill{ display:inline-block; padding:.25rem .7rem; border-radius:999px; font-weight:900; font-size:.9rem; }
+    .pill-orange{ background:#ffedd5; color:#9a3412; }
+    .pill-blue{ background:#dbeafe; color:#1e3a8a; }
+
+    .mini-header{
+      font-weight:900; text-transform:uppercase; letter-spacing:.06em; font-size:.85rem;
+      color: rgba(15,23,42,.75);
+    }
+
+    .two-col{ display:grid; grid-template-columns:1fr; gap:12px; }
+    @media (min-width: 900px){
+      .two-col{ grid-template-columns: 1.25fr .75fr; align-items:start; }
+      .sticky{ position:sticky; top:12px; }
+    }
+
+    /* Flashcards */
+    .flashcard{ perspective:1000px; width:100%; height:270px; cursor:pointer; }
+    .flash-inner{ position:relative; width:100%; height:100%; transition: transform .35s; transform-style:preserve-3d; }
+    .flipped .flash-inner{ transform: rotateY(180deg); }
+    .flash-front,.flash-back{
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      padding:16px; border-radius:16px; border:4px solid var(--steel);
+      backface-visibility:hidden; text-align:center;
+    }
+    .flash-front{ background:white; font-weight:900; font-size:1.75rem; color: var(--steel); text-transform:uppercase; line-height:1.15; }
+    .flash-back{ background: var(--orange); color:white; transform: rotateY(180deg); font-weight:900; font-size:1.24rem; line-height:1.5; }
+
+    /* Options */
+    .opt{
+      width:100%; text-align:left; padding:12px;
+      border:2px solid #e2e8f0; border-radius:14px; background:white;
+      font-weight:900; color: var(--slate); transition:.15s ease;
+    }
+    .opt:hover{ border-color:#93c5fd; background:#eff6ff; }
+    .opt.selected{
+      border-color: var(--orange);
+      box-shadow: 0 0 0 4px rgba(249,115,22,.14);
+      background: #fff7ed;
+    }
+
+    .reveal{ display:none; margin-top:10px; padding:12px; border-radius:14px; font-weight:900; }
+    .fb-good{ background: var(--good-bg); border:2px solid var(--good-bd); color: var(--good-tx); }
+    .fb-bad{ background: var(--wrong-bg); border:2px solid var(--wrong-bd); color: var(--wrong-tx); }
+
+    /* Practice */
+    .practice-shell{ border:1px solid #e2e8f0; border-radius:18px; background:white; padding:16px; }
+    .practice-instr{ border:2px solid #dbeafe; border-radius:16px; padding:12px 14px; background:#eff6ff; }
+    .practice-instr p{ margin:0; font-weight:900; color: var(--slate); }
+    .practice-example{
+      margin-top:10px; border:2px dashed #cbd5e1; border-radius:16px; padding:14px;
+      background:#f8fafc; font-family: var(--mono); font-size:1.05rem; color:#0b1220;
+    }
+    .practice-example .blank{
+      display:inline-block; padding:.08rem .55rem; border-radius:.6rem;
+      border:2px dashed rgba(249,115,22,.55); background:#fff7ed; font-weight:900; color:#9a3412;
+      font-family:"Archivo", sans-serif;
+    }
+    .opt-practice{
+      width:100%; text-align:left; padding:14px;
+      border:2px solid #e2e8f0; border-radius:16px; background:white;
+      font-weight:900; color: var(--slate); transition:.15s ease;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .opt-practice:hover{ border-color:#93c5fd; background:#eff6ff; }
+    .opt-tag{
+      padding:.2rem .55rem; border-radius:999px; font-size:.9rem; font-weight:900;
+      background:#f1f5f9; color: var(--slate); border:1px solid #e2e8f0; white-space:nowrap;
+    }
+
+    /* Grammar rewrite */
+    textarea{
+      width:100%; min-height:64px;
+      border:2px solid #e2e8f0; border-radius:14px;
+      padding:10px 12px; font-weight:800; color: var(--slate);
+      background:white; outline:none;
+    }
+    textarea:focus{
+      border-color:#93c5fd;
+      box-shadow:0 0 0 4px rgba(59,130,246,.12);
+    }
+    .row{
+      border:1px solid #e2e8f0; background:#ffffff; border-radius:16px; padding:12px;
+    }
+    .row .a{
+      font-family: var(--mono);
+      color: var(--slate);
+      font-weight:800;
+      font-size:1.02rem;
+    }
+    .sol{
+      display:none; margin-top:8px; padding:10px 12px; border-radius:14px; font-weight:900;
+    }
+    .sol.mono{ font-family: var(--mono); font-size: 1.02rem; }
+
+    /* Decisions */
+    .decision-card{
+      border:1px solid #e2e8f0; border-radius:18px; background:white; padding:14px;
+      box-shadow: 0 10px 26px rgba(2,6,23,.06);
+    }
+    .decision-head{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      padding-bottom:10px; border-bottom:1px solid #e2e8f0;
+    }
+    .decision-context{
+      font-family: var(--mono);
+      font-weight:900;
+      color:#334155;
+      font-size:.95rem;
+    }
+    .problem-box{
+      margin-top:12px;
+      border:2px solid var(--problem-bd);
+      background: var(--problem-bg);
+      border-radius:16px;
+      padding:12px 14px;
+    }
+    .problem-box .lbl{
+      font-family: var(--mono); font-weight:900; font-size:.9rem;
+      color: var(--problem-tx); text-transform:uppercase; letter-spacing:.08em;
+    }
+    .problem-box .txt{
+      margin-top:6px; font-weight:900; color: var(--slate);
+      font-size: 1.15rem;
+    }
+    .choices-box{
+      margin-top:12px;
+      border:2px solid var(--choice-bd);
+      background: var(--choice-bg);
+      border-radius:16px;
+      padding:12px;
+    }
+    .choices-box .lbl{
+      font-family: var(--mono); font-weight:900; font-size:.9rem;
+      color: var(--choice-tx); text-transform:uppercase; letter-spacing:.08em;
+      margin-bottom:8px;
+    }
+    .explain-box{
+      margin-top:12px;
+      border:2px solid #a7f3d0;
+      background:#ecfdf5;
+      border-radius:16px;
+      padding:12px 14px;
+    }
+    .explain-box .lbl{
+      font-family: var(--mono);
+      font-weight:900;
+      font-size:.9rem;
+      color:#065f46;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .explain-box .q{
+      margin-top:6px;
+      font-weight:900;
+      color: var(--slate);
+    }
+
+    /* Final test */
+    .q-box{
+      border:2px solid #dbeafe; background:#eff6ff; border-radius:16px; padding:12px 14px;
+    }
+    .q-box .lbl{
+      font-family: var(--mono);
+      font-weight:900; font-size:.9rem; color:#1e3a8a;
+      text-transform:uppercase; letter-spacing:.08em;
+    }
+    .q-box .qtext{
+      margin-top:6px; font-weight:900; color: var(--slate); font-size: 1.2rem;
+    }
+    .options-gap{ margin-top: 14px; }
+  </style>
+</head>
+
+<body class="pb-16">
+
+  <!-- HERO -->
+  <div class="hero">
+    <img id="hero-img" src="data:image/jpeg;base64,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" alt="Danube Bridge at Mohács" class="w-full h-full object-cover opacity-95">
+    <div class="hero-overlay">
+      <div class="w-full max-w-7xl mx-auto flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+        <div class="hero-title">
+          <div class="text-white text-4xl md:text-5xl font-black uppercase tracking-tight">
+            BIM for Bridges <span class="text-orange-400">February 2026</span>
+          </div>
+          <div class="text-white/80 font-bold uppercase tracking-widest text-sm mt-1">
+            Engineer English Learning App
+          </div>
+        </div>
+
+        <!-- No selector; show single-article title -->
+        <div class="text-white/90 font-black text-xl md:text-2xl uppercase">
+          Danube Bridge at Mohács (Network Arch Bridge)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 md:px-6 mt-4">
+
+    <!-- NAV -->
+    <nav class="flex flex-wrap gap-2 justify-center mb-4">
+      <button class="nav-btn active" data-pane="article">📄 Article</button>
+      <button class="nav-btn" data-pane="summary">🧠 Summary</button>
+      <button class="nav-btn" data-pane="vocab">📘 Keywords</button>
+      <button class="nav-btn" data-pane="practice">✍️ Practice (20)</button>
+      <button class="nav-btn" data-pane="grammar">🧩 Grammar (Passive)</button>
+      <button class="nav-btn" data-pane="decisions">🏗️ Decisions</button>
+      <button class="nav-btn" data-pane="test">🏁 Final Test (20)</button>
+    </nav>
+
+    <!-- MAIN -->
+    <main class="card p-4 md:p-5 min-h-[620px]">
+
+      <!-- ARTICLE -->
+      <section id="pane-article" class="fade-in">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-2 mb-3">
+          <h2 class="text-3xl md:text-4xl font-black text-slate-900 uppercase">
+            Design of the Danube Bridge at Mohács
+          </h2>
+          <div class="flex flex-wrap gap-2">
+            <span class="pill pill-orange">Keywords</span>
+            <span class="pill pill-blue">Phrases</span>
+          </div>
+        </div>
+        <div id="article-detailed" class="space-y-3 text-slate-900"></div>
+      </section>
+
+      <!-- SUMMARY -->
+      <section id="pane-summary" class="hidden fade-in">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-2 mb-3">
+          <h2 class="text-3xl md:text-4xl font-black text-slate-900 uppercase">Engineer Summary</h2>
+          <span class="pill pill-orange">Clues + Phrases for discussion</span>
+        </div>
+
+        <div class="two-col">
+          <div>
+            <div class="mini-header mb-2">Summary clues (reconstruct the article)</div>
+            <div id="summary-accordion" class="space-y-2"></div>
+          </div>
+
+          <div class="sticky">
+            <div class="mini-header mb-2">Useful expressions (Problem → Solution)</div>
+
+            <div class="space-y-2">
+              <div class="border border-slate-200 bg-white rounded-2xl p-3">
+                <div class="font-black text-slate-900 mb-1">Explain the problem</div>
+                <div class="space-y-2 font-semibold text-slate-900">
+                  <div>• <span class="ph">The main problem was that…</span></div>
+                  <div>• <span class="ph">This was difficult because…</span></div>
+                  <div>• <span class="ph">The site was constrained by…</span></div>
+                </div>
+              </div>
+
+              <div class="border border-slate-200 bg-white rounded-2xl p-3">
+                <div class="font-black text-slate-900 mb-1">Explain the solution</div>
+                <div class="space-y-2 font-semibold text-slate-900">
+                  <div>• <span class="ph">The solution was to…</span></div>
+                  <div>• <span class="ph">This was implemented due to…</span></div>
+                  <div>• <span class="ph">As a result, we achieved…</span></div>
+                </div>
+              </div>
+
+              <div class="border border-slate-200 bg-slate-50 rounded-2xl p-3">
+                <div class="font-black text-slate-900 mb-1">Discussion tip</div>
+                <div class="text-slate-700 font-semibold">
+                  Use the clues on the left + the phrases here to present the project as a short engineering story.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VOCAB -->
+      <section id="pane-vocab" class="hidden fade-in">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
+          <h2 class="text-3xl md:text-4xl font-black text-slate-900 uppercase">20 Keywords</h2>
+          <div class="text-slate-600 font-bold">Tap the card to flip • Use Next/Prev</div>
+        </div>
+
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3">
+          <div id="flashcard" class="flashcard">
+            <div class="flash-inner">
+              <div class="flash-front"><span id="card-term">Term</span></div>
+              <div class="flash-back"><span id="card-def">Definition</span></div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mt-3">
+            <button id="btn-prev" class="nav-btn">← Prev</button>
+            <button id="btn-reset" class="nav-btn">Reset</button>
+            <button id="btn-next" class="nav-btn active">Next →</button>
+          </div>
+          <div id="progress" class="mt-2 font-mono text-sm text-slate-600">Term 1 / 20</div>
+        </div>
+      </section>
+
+      <!-- PRACTICE -->
+      <section id="pane-practice" class="hidden fade-in">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
+          <h2 class="text-3xl md:text-4xl font-black text-slate-900 uppercase">Practice: Keyword in Context</h2>
+          <div id="p-count" class="pill pill-blue">1 / 20</div>
+        </div>
+
+        <div class="practice-shell">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+
+            <div class="lg:col-span-5">
+              <div class="mini-header mb-2">Instruction</div>
+              <div class="practice-instr">
+                <p>Choose the keyword that best completes the sentence.</p>
+                <p class="text-slate-700 font-semibold mt-1">Focus on meaning. Use the project context.</p>
+              </div>
+
+              <div class="mini-header mt-4 mb-2">Example sentence</div>
+              <div id="practice-example" class="practice-example"></div>
+            </div>
+
+            <div class="lg:col-span-7">
+              <div class="mini-header mb-2">Options</div>
+              <div id="practice-opts" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
+
+              <div id="practice-fb" class="reveal"></div>
+
+              <div class="flex justify-between mt-4 pt-3 border-t border-slate-200">
+                <button id="p-prev" class="nav-btn">❮ Prev</button>
+                <div class="flex gap-2">
+                  <button id="p-reset" class="nav-btn">Reset</button>
+                  <button id="p-reset-all" class="nav-btn">Reset All</button>
+                </div>
+                <button id="p-next" class="nav-btn active">Next ❯</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- GRAMMAR (per-sentence check + reveal) -->
+      <section id="pane-grammar" class="hidden fade-in">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
+          <h2 class="text-3xl md:text-4xl font-black text-slate-900 uppercase">Grammar: Passive Voice</h2>
+          <span class="pill pill-blue">Rewrite 10 sentences</span>
+        </div>
+
+        <details open>
+          <summary>How to form the passive <span class="acc-icon">+</span></summary>
+          <div class="acc-body space-y-2">
+            <div><span class="ph">Form:</span> <span class="kw">be</span> + <span class="kw">past participle</span> (was / were + V3)</div>
+            <div class="text-slate-700 font-semibold">Example: Engineers scanned the site → The site <span class="ph">was scanned</span>.</div>
+          </div>
+        </details>
+
+        <div class="mt-3 border border-slate-200 rounded-2xl p-4 bg-white">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <div class="mini-header">Task controls</div>
+            <div class="flex gap-2">
+              <button id="gr-reveal-all" class="nav-btn">Reveal All Solutions</button>
+              <button id="gr-reset" class="nav-btn">Reset</button>
+            </div>
+          </div>
+
+          <div id="rewrite-list" class="mt-3 space-y-3"></div>
+        </div>
+      </section>
+
+      <!-- DECISIONS -->
+      <section id="pane-decisions" class="hidden fade-in">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-2 mb-3">
+          <h2 class="text-3xl md:text-4xl font-black text-slate-900 uppercase">Engineer Decisions</h2>
+          <span class="pill pill-orange">Decide + explain</span>
+        </div>
+
+        <details>
+          <summary>How to do this task (quick instructions) <span class="acc-icon">+</span></summary>
+          <div class="acc-body space-y-2">
+            <div>1) Read the <span class="kw">Problem</span> box.</div>
+            <div>2) Choose the best <span class="ph">engineering solution</span> (you can change your choice).</div>
+            <div>3) Open <span class="ph">Explain</span> to compare your reasoning with the model answer.</div>
+          </div>
+        </details>
+
+        <div id="decisions-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3"></div>
+      </section>
+
+      <!-- FINAL TEST -->
+      <section id="pane-test" class="hidden fade-in">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
+          <h2 class="text-3xl md:text-4xl font-black text-slate-900 uppercase">Final Test</h2>
+          <div id="t-count" class="pill pill-blue">1 / 20</div>
+        </div>
+
+        <div class="border border-slate-200 rounded-2xl p-4 bg-white">
+          <div class="q-box">
+            <div class="lbl">Question</div>
+            <div id="final-q" class="qtext">Question...</div>
+          </div>
+
+          <div class="options-gap">
+            <div class="mini-header mb-2">Choose an answer (you can change your choice)</div>
+            <div id="final-opts" class="space-y-2"></div>
+          </div>
+
+          <div id="final-fb" class="reveal"></div>
+
+          <div class="flex justify-between mt-4 pt-3 border-t border-slate-200">
+            <button id="t-prev" class="nav-btn">❮ Prev</button>
+            <div class="flex gap-2">
+              <button id="t-reset" class="nav-btn">Reset</button>
+              <button id="t-reset-all" class="nav-btn">Reset All</button>
+            </div>
+            <button id="t-next" class="nav-btn active">Next ❯</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    // ---------- Highlight helpers ----------
+    const KEYWORDS = [
+      "arch bridge","stiffening girder","orthotropic deck","network hanger","box section","box girder","cross-bracing",
+      "navigation channel","floodplain","parametric design","Grasshopper","Rhino","Tekla","clash detection","launching nose",
+      "temporary support tower","corrosion protection","assembly unit","fabrication unit","BIM","span"
+    ];
+    const PHRASES = [
+      "was designed","was modelled","was developed","was assembled","was integrated","was repositioned","was carried out","was exported"
+    ];
+    function escapeRE(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+    function highlightAll(html){
+      let out = html;
+      [...KEYWORDS].sort((a,b)=>b.length-a.length).forEach(k=>{
+        const re = new RegExp(`\\b${escapeRE(k)}\\b`, "gi");
+        out = out.replace(re, (m)=>`<span class="kw">${m}</span>`);
+      });
+      [...PHRASES].sort((a,b)=>b.length-a.length).forEach(p=>{
+        const re = new RegExp(`\\b${escapeRE(p)}\\b`, "gi");
+        out = out.replace(re, (m)=>`<span class="ph">${m}</span>`);
+      });
+      return out;
+    }
+    function shuffle(arr){
+      return arr.map(v=>({v,r:Math.random()})).sort((a,b)=>a.r-b.r).map(x=>x.v);
+    }
+
+    // ---------- Single article data ----------
+    const article = {
+      hero: "hero.jpg",
+      detailedArticle: [
+        { h:"About the Project", p:`The design of the Danube Bridge at Mohács and its associated 30 km road network began in 2019. The bridge is a joint creation of SPECIÁLTERV and FŐMTERV, with SPECIÁLTERV coordinating the whole project and fully designing two of the three arch spans (230 m and 250 m), while FŐMTERV prepared the approval, execution, and fabrication plans for the 270 m span. The three arches share the same structural principles but differ slightly in geometry to suit their own dimensions and construction technology. The construction tender was won by Duna Aszfalt.` },
+        { h:"Context and Site", p:`The Mohács region of Southern Hungary had long awaited a permanent Danube crossing. The project includes about 30 km of road and 17 additional bridge structures. The Danube Bridge itself crosses one of Europe's busiest waterways and a strictly protected floodplain nature reserve, so careful planning was essential. BIM modelling shortened the design process and gave a transparent platform for all stakeholders, helping produce a site-appropriate landmark. Construction began in 2024, with on-site assembly starting in May 2025 and an expected duration of three years.` },
+        { h:"Structural Concept", p:`The bridge has a total length of 756 m, made of three simply supported, through-type steel arch spans of 270 m, 250 m, and 230 m. Each span is a network arch bridge: closed box-section arches and stiffening girders with an orthotropic steel deck, suspended by a two-sided network hanger system. The river pier sits on the inner side of the river bend for hydraulic efficiency, keeping the 180 m navigation channel properly aligned. The arches lean toward each other at 13° from the vertical, and their cross-section grows from 1.6 m at midspan to about 3.0 m near the deck.` },
+        { h:"Cable Arrangement", p:`The steel arch is suspended by a stiffening girder carried on a network of inclined hanger cables — a typology now widely used internationally. Because the hangers are inclined within the plane of the arch, they distribute concentrated live loads along the length of the bridge. This reduces bending moments in both the arches and the girders, allowing more slender cross-sections, lighter substructures, less temporary work during construction, and a smaller paintable surface — which cuts both initial and long-term corrosion-protection costs.` },
+        { h:"General Arrangement", p:`The bridge deck is 31.56 m wide, carrying a 3.30 m bicycle lane and two lanes of traffic in each direction. The steel superstructure is 2.73 m deep. The 1.60 m wide arches connect to the box girders through steel tubes arranged in the same network layout as the hangers. The stiffening girders are 1.64 m wide, 1.80 m deep, non-walkable, airtight closed box sections — sealed to keep out moisture and oxygen, removing two of the essential conditions for corrosion. Three maintenance walkways run beneath the deck, so no separate inspection gantry is needed.` },
+        { h:"Parametric Design", p:`The arches and their hanger connections were modelled with Rhino and Grasshopper, which made it far easier to model curved geometry and optimise how elements were distributed. By defining variable parameters — span length, arch rise, cross-section, cable diameter and spacing — the team could quickly generate a base model and explore design alternatives across all three bridges. A wireframe model alone was not enough for fabrication, though: the detailed fabrication models were built in Tekla Structures, generated algorithmically through a direct Grasshopper–Tekla interface.` },
+        { h:"Model Hierarchy and Coordination", p:`SPECIÁLTERV modelled the B1 and B2 superstructures, FŐMTERV modelled the B3 superstructure, and the two offices shared developing models continuously. The deck of the B1 bridge has 13 assembly units and the B2 bridge has 14, while each bridge's arch support is divided into 10 assembly units — each further split into fabrication units sized by weight and maximum dimensions. Verification between structural engineers and BIM modellers ran through Trimble Connect, with the Tekla model exported in separate colour-coded views for structural elements, steel quality, and plate thickness.` },
+        { h:"Detailed Design and Clash Detection", p:`Secondary components — lighting, the monitoring system, and drainage and flushing pipelines — also had to be checked against the main structure. One clash detection analysis found that a pair of lighting columns would interfere with the hanger cables, so the design team repositioned them before fabrication rather than fixing the problem on site.` },
+        { h:"Auxiliary Structures and Assembly", p:`Several temporary structures had to be modelled in Tekla alongside the permanent bridge: a launching nose to assist installation, auxiliary braces to stiffen the bridge during erection, temporary support towers for erecting the arches, and launching pads placed under the bridge during insertion. This required a clear data structure defining which system belonged to which construction phase.` },
+        { h:"Decorative Lighting", p:`The 756 m bridge is lit along its full length on both sides. Because the arches are the key visual feature, the lighting scheme highlights them and the roadway alignment: linear LED luminaires — more than 3 km of them in total — run continuously along the deck and arch, while the piers are lit from the bridge structure with downward, wide-beam floodlights. The lighting colours are fully programmable.` }
+      ],
+      engineerSummary: [
+        { h:"Context", p:"A 756 m Danube crossing at Mohács, spanning a busy waterway and a protected floodplain reserve, designed jointly by SPECIÁLTERV and FŐMTERV." },
+        { h:"Challenge", p:"Three arch spans (230/250/270 m) had to share one structural concept while adapting to different geometry, fabrication, and site-assembly conditions." },
+        { h:"Solution", p:"A through-type steel network arch bridge with inclined two-sided hangers, sealed box-section arches and girders, and an orthotropic deck — reducing bending moments, weight, and corrosion-protection costs." },
+        { h:"Workflow", p:"Parametric modelling in Rhino/Grasshopper generated the curved arch geometry; a direct interface pushed this into Tekla Structures for fabrication detail, verified between offices through Trimble Connect." },
+        { h:"Results", p:"Clash detection caught conflicts (e.g. lighting columns vs. hanger cables) before fabrication; the bridge uses about 15,000 t of structural steel and began on-site assembly in May 2025." }
+      ],
+      vocab: [
+        { t:"Arch Bridge", d:"A bridge that carries load mainly through a curved compression member.", ex:"Each of the three spans is a through-type steel arch bridge." },
+        { t:"Stiffening Girder", d:"The horizontal deck-level girder that works together with the arch to resist bending.", ex:"The stiffening girders are 1.80 m deep, airtight closed box sections." },
+        { t:"Orthotropic Deck", d:"A lightweight steel deck stiffened by ribs welded to a steel plate.", ex:"An orthotropic steel deck sits between the two arches." },
+        { t:"Network Hanger System", d:"A hanger arrangement with inclined, crossing cables that distribute load along the span.", ex:"A two-sided network hanger system suspends the stiffening girder." },
+        { t:"Box Section", d:"A hollow, closed structural cross-section, often sealed against the weather.", ex:"The arches and girders are built from airtight closed box sections." },
+        { t:"Cross-Bracing", d:"Diagonal members connecting two structural elements to add stiffness.", ex:"An X-type cross-bracing system connects the two arches." },
+        { t:"Navigation Channel", d:"The part of a waterway kept clear for ship traffic.", ex:"The 180 m navigation channel had to remain properly aligned." },
+        { t:"Floodplain", d:"Low-lying land beside a river that can flood, often ecologically protected.", ex:"The bridge crosses a strictly protected floodplain nature reserve." },
+        { t:"Parametric Design", d:"A modelling approach where geometry is generated from defined variables.", ex:"Parametric design made it easier to model the curved arches." },
+        { t:"Grasshopper", d:"A visual-programming tool used with Rhino to build parametric models.", ex:"The hanger connections were modelled using Rhino and Grasshopper." },
+        { t:"Rhino", d:"3D modelling software often paired with Grasshopper for parametric work.", ex:"Rhino was used to generate the base geometry of the arches." },
+        { t:"Tekla Structures", d:"BIM software used to build detailed steel fabrication models.", ex:"The detailed fabrication models were developed using Tekla Structures." },
+        { t:"Clash Detection", d:"Checking a 3D model for physical conflicts between elements.", ex:"Clash detection revealed that lighting columns needed repositioning." },
+        { t:"Launching Nose", d:"A temporary lightweight extension that helps install a bridge span.", ex:"A launching nose assisted in the bridge's installation." },
+        { t:"Temporary Support Tower", d:"A temporary tower used to hold structural elements during erection.", ex:"Temporary support towers were designed for erecting the arches." },
+        { t:"Corrosion Protection", d:"Measures taken to prevent steel from rusting over time.", ex:"Sealed box sections reduced both initial and long-term corrosion-protection costs." },
+        { t:"Assembly Unit", d:"A group of fabrication units combined for on-site installation.", ex:"The B2 bridge deck consists of 14 assembly units." },
+        { t:"Fabrication Unit", d:"A sub-assembly sized for manufacture, based on weight and dimensions.", ex:"Assembly units were broken into several fabrication units." },
+        { t:"BIM", d:"A digital model-based process used to design, coordinate, and document a structure.", ex:"BIM modelling shortened the design process and improved coordination." },
+        { t:"Span", d:"The distance a structure covers between its supports.", ex:"The three arches have spans of 230 m, 250 m, and 270 m." }
+      ],
+      rewritePassive: [
+        { active:"SPECIÁLTERV designed the complete coordination of the project.", passive:"The complete coordination of the project was designed by SPECIÁLTERV." },
+        { active:"Engineers modelled the arches using Rhino and Grasshopper.", passive:"The arches were modelled using Rhino and Grasshopper." },
+        { active:"The team developed the detailed fabrication models in Tekla Structures.", passive:"The detailed fabrication models were developed in Tekla Structures." },
+        { active:"Engineers carried out clash detection analyses.", passive:"Clash detection analyses were carried out." },
+        { active:"The designers repositioned a pair of lighting columns.", passive:"A pair of lighting columns was repositioned." },
+        { active:"Workers divided the B2 deck into 14 assembly units.", passive:"The B2 deck was divided into 14 assembly units." },
+        { active:"Duna Aszfalt won the construction tender.", passive:"The construction tender was won by Duna Aszfalt." },
+        { active:"Engineers exported the Tekla model in three representation modes.", passive:"The Tekla model was exported in three representation modes." },
+        { active:"The contractor began on-site assembly in May 2025.", passive:"On-site assembly was begun in May 2025." },
+        { active:"Engineers verified the model in Trimble Connect.", passive:"The model was verified in Trimble Connect." }
+      ],
+      decisions: [
+        {
+          title:"Decision 1 — Hanger system choice",
+          context:"Constraint: reduce bending moments, allow slender members",
+          q:"Which cable arrangement best reduces bending moments in the arch and girder?",
+          choices:[
+            { text:"Use a traditional single vertical hanger system.", correct:false, fb:"Concentrates live loads and increases bending moments." },
+            { text:"Use a two-sided network hanger system with inclined cables.", correct:true, fb:"Correct: distributes live loads along the span, reducing bending moments and enabling slender sections." },
+            { text:"Remove the hangers and use a solid deck instead.", correct:false, fb:"Not feasible for a 250+ m arch span; loses the arch-tie action." }
+          ],
+          revealQ:"Why does the network arrangement allow more slender arches and girders?",
+          revealA:"Inclined hangers distribute concentrated live loads along the bridge, reducing peak bending moments so smaller, lighter cross-sections can be used."
+        },
+        {
+          title:"Decision 2 — Corrosion protection strategy",
+          context:"Constraint: long-term maintenance cost, closed box sections",
+          q:"How can the design reduce long-term corrosion-protection costs?",
+          choices:[
+            { text:"Use open sections that are easy to inspect and repaint.", correct:false, fb:"A larger paintable surface increases both initial and maintenance costs." },
+            { text:"Use airtight, sealed closed box sections that exclude moisture and oxygen.", correct:true, fb:"Correct: sealing out moisture and oxygen removes two essential conditions for corrosion, cutting maintenance needs." },
+            { text:"Increase plate thickness only, without sealing.", correct:false, fb:"Thicker plate alone does not stop the corrosion mechanism; sealing does." }
+          ],
+          revealQ:"What two conditions does the airtight box section eliminate?",
+          revealA:"It keeps moisture and oxygen out of the structure's interior, removing two of the essential conditions needed for corrosion."
+        },
+        {
+          title:"Decision 3 — Parametric modelling boundary",
+          context:"Constraint: curved geometry vs. unique or rare elements",
+          q:"Which elements should be modelled parametrically, and which manually?",
+          choices:[
+            { text:"Model every single element parametrically for full automation.", correct:false, fb:"Complex plates and rare, one-off elements are harder to control this way and slow the model down." },
+            { text:"Model repeating, variable-geometry elements parametrically; model complex or rare elements manually.", correct:true, fb:"Correct: parametric rules suit repeatable geometry, while manual modelling works better for unique or complex plates." },
+            { text:"Avoid parametric tools entirely and model everything by hand.", correct:false, fb:"Loses the speed and consistency benefits for the many repeating curved elements." }
+          ],
+          revealQ:"Why was a clear boundary needed between automated and manual modelling?",
+          revealA:"Some elements, like complex plates and rare details, were better modelled individually, while repeating curved geometry benefited from parametric automation — mixing both kept the model efficient and stable."
+        },
+        {
+          title:"Decision 4 — Clash detection and lighting",
+          context:"Constraint: lighting columns conflicting with hanger cables",
+          q:"Clash detection shows lighting columns interfere with the hanger cables. What is the best response?",
+          choices:[
+            { text:"Ignore the clash since lighting is a secondary system.", correct:false, fb:"Secondary systems still need to physically fit; ignoring clashes causes installation problems later." },
+            { text:"Reposition the lighting columns to avoid the hanger cables.", correct:true, fb:"Correct: this is exactly what the design team did after clash detection revealed the conflict." },
+            { text:"Remove the hanger cables in that area instead.", correct:false, fb:"The hangers are structural; secondary elements should be adjusted around them, not the reverse." }
+          ],
+          revealQ:"What does this clash resolution show about BIM's role in design?",
+          revealA:"BIM coordination catches conflicts between structural and secondary systems (like lighting) before construction, allowing cheap design fixes instead of costly on-site problems."
+        }
+      ],
+      finalTest: [
+        { q:"What type of bridge structure is the Danube Bridge at Mohács?", a:"A simply supported, through-type steel arch bridge.", o:[
+          "A simply supported, through-type steel arch bridge.",
+          "A cable-stayed bridge with a single pylon.",
+          "A precast concrete box-girder bridge."
+        ]},
+        { q:"How many consecutive arch spans make up the bridge?", a:"Three.", o:[
+          "Three", "Two", "Five"
+        ]},
+        { q:"What is the total length of the bridge?", a:"756 m.", o:[
+          "756 m", "500 m", "1,020 m"
+        ]},
+        { q:"What are the span lengths of the three arches?", a:"230 m, 250 m, and 270 m.", o:[
+          "230 m, 250 m, and 270 m.",
+          "150 m, 200 m, and 250 m.",
+          "300 m, 320 m, and 340 m."
+        ]},
+        { q:"What deck type does the bridge use?", a:"An orthotropic steel deck.", o:[
+          "An orthotropic steel deck.",
+          "A precast concrete deck.",
+          "A timber deck."
+        ]},
+        { q:"What type of hanger system suspends the deck?", a:"A two-sided network hanger system.", o:[
+          "A two-sided network hanger system.",
+          "A single vertical hanger system.",
+          "A fan-shaped cable-stayed system."
+        ]},
+        { q:"Why does the network hanger system help?", a:"It distributes live loads and reduces bending moments, allowing slender sections.", o:[
+          "It distributes live loads and reduces bending moments, allowing slender sections.",
+          "It removes the need for an arch altogether.",
+          "It increases the total weight of the structure."
+        ]},
+        { q:"At what angle are the arches inclined toward each other?", a:"13° from the vertical.", o:[
+          "13° from the vertical", "30° from the vertical", "5° from the vertical"
+        ]},
+        { q:"Why are the box sections of the girders sealed and airtight?", a:"To keep out moisture and oxygen and reduce corrosion.", o:[
+          "To keep out moisture and oxygen and reduce corrosion.",
+          "To make them lighter than open sections.",
+          "To allow water drainage inside the box."
+        ]},
+        { q:"Which software was used for parametric modelling of the arches?", a:"Rhino and Grasshopper.", o:[
+          "Rhino and Grasshopper.", "AutoCAD only.", "Revit only."
+        ]},
+        { q:"Which software was used to develop detailed fabrication models?", a:"Tekla Structures.", o:[
+          "Tekla Structures.", "SketchUp.", "ArchiCAD."
+        ]},
+        { q:"Which platform was used to verify the model between engineers and BIM modellers?", a:"Trimble Connect.", o:[
+          "Trimble Connect.", "Google Drive.", "Autodesk BIM 360 only."
+        ]},
+        { q:"What did clash detection reveal about the lighting columns?", a:"They needed repositioning to avoid the hanger cables.", o:[
+          "They needed repositioning to avoid the hanger cables.",
+          "They needed to be removed entirely.",
+          "They needed to be doubled in number."
+        ]},
+        { q:"How many assembly units make up the B2 bridge deck?", a:"14.", o:[
+          "14", "13", "10"
+        ]},
+        { q:"How many assembly units does each bridge's arch support have?", a:"10.", o:[
+          "10", "14", "13"
+        ]},
+        { q:"Which auxiliary structure assists in installing the bridge?", a:"The launching nose.", o:[
+          "The launching nose.",
+          "The lighting column.",
+          "The navigation channel."
+        ]},
+        { q:"Which auxiliary structures support the arches during erection?", a:"Temporary supporting towers.", o:[
+          "Temporary supporting towers.",
+          "Permanent piers.",
+          "Launching pads only."
+        ]},
+        { q:"Approximately how much structural steel does the bridge use?", a:"15,000 tonnes.", o:[
+          "15,000 tonnes", "5,000 tonnes", "50,000 tonnes"
+        ]},
+        { q:"What is the width of the bridge?", a:"31.56 m.", o:[
+          "31.56 m", "20 m", "45 m"
+        ]},
+        { q:"When did on-site assembly of the bridge begin?", a:"May 2025.", o:[
+          "May 2025", "January 2019", "March 2026"
+        ]}
+      ]
+    };
+
+    // ---------- State ----------
+    let vocabIdx = 0;
+    let practiceIdx = 0;
+    let practiceAnswered = [];
+    let rewriteAnswers = [];
+    let decisionSelections = [];
+    let testIdx = 0;
+    let testSelections = [];
+
+    // ---------- Elements ----------
+    const articleDetailed = document.getElementById("article-detailed");
+    const summaryAcc = document.getElementById("summary-accordion");
+
+    // Flashcards
+    const flash = document.getElementById("flashcard");
+    const cardTerm = document.getElementById("card-term");
+    const cardDef  = document.getElementById("card-def");
+    const progress = document.getElementById("progress");
+    const btnPrev  = document.getElementById("btn-prev");
+    const btnNext  = document.getElementById("btn-next");
+    const btnReset = document.getElementById("btn-reset");
+
+    // Practice
+    const pCount = document.getElementById("p-count");
+    const practiceExample = document.getElementById("practice-example");
+    const practiceOpts = document.getElementById("practice-opts");
+    const practiceFb = document.getElementById("practice-fb");
+    const pPrev = document.getElementById("p-prev");
+    const pNext = document.getElementById("p-next");
+    const pReset = document.getElementById("p-reset");
+    const pResetAll = document.getElementById("p-reset-all");
+
+    // Grammar rewrite
+    const rewriteList = document.getElementById("rewrite-list");
+    const grRevealAll = document.getElementById("gr-reveal-all");
+    const grReset = document.getElementById("gr-reset");
+
+    // Decisions
+    const decisionsGrid = document.getElementById("decisions-grid");
+
+    // Final test
+    const tCount = document.getElementById("t-count");
+    const finalQ = document.getElementById("final-q");
+    const finalOpts = document.getElementById("final-opts");
+    const finalFb = document.getElementById("final-fb");
+    const tPrev = document.getElementById("t-prev");
+    const tNext = document.getElementById("t-next");
+    const tReset = document.getElementById("t-reset");
+    const tResetAll = document.getElementById("t-reset-all");
+
+    // ---------- Navigation ----------
+    function showPane(pane){
+      document.querySelectorAll("main > section").forEach(s=>s.classList.add("hidden"));
+      document.querySelectorAll("nav .nav-btn").forEach(b=>b.classList.remove("active"));
+      document.getElementById(`pane-${pane}`).classList.remove("hidden");
+      document.querySelector(`[data-pane="${pane}"]`).classList.add("active");
+    }
+    document.querySelectorAll("nav .nav-btn").forEach(btn=>{
+      btn.addEventListener("click", ()=> showPane(btn.dataset.pane));
+    });
+
+    // ---------- Render: Article ----------
+    function renderArticle(){
+      articleDetailed.innerHTML = article.detailedArticle.map(sec=>`
+        <div class="border border-slate-200 rounded-2xl p-3 bg-white">
+          <div class="text-xl font-black text-slate-900 mb-1">${sec.h}</div>
+          <div class="text-slate-900 font-semibold">${highlightAll(sec.p)}</div>
+        </div>
+      `).join("");
+    }
+
+    // ---------- Render: Summary ----------
+    function renderSummary(){
+      summaryAcc.innerHTML = article.engineerSummary.map(it=>`
+        <details open>
+          <summary>${it.h} <span class="acc-icon">+</span></summary>
+          <div class="acc-body">${highlightAll(it.p)}</div>
+        </details>
+      `).join("");
+    }
+
+    // ---------- Flashcard ----------
+    function renderFlashcard(){
+      const item = article.vocab[vocabIdx];
+      cardTerm.textContent = item.t;
+      cardDef.innerHTML = `${item.d}<br><br><span class="ph">Example:</span> ${item.ex}`;
+      progress.textContent = `Term ${vocabIdx+1} / ${article.vocab.length}`;
+      flash.classList.remove("flipped");
+    }
+
+    // ---------- Practice ----------
+    function makePracticeItem(idx){
+      const v = article.vocab[idx];
+      const other = article.vocab.map(x=>x.t).filter(t=>t !== v.t);
+      const distractors = shuffle(other).slice(0,3);
+      const options = shuffle([v.t, ...distractors]).slice(0,4);
+      const sentence = v.ex.replace(new RegExp(`\\b${escapeRE(v.t)}\\b`, "i"), `<span class="blank">_____</span>`);
+      return { sentence, options, answer:v.t };
+    }
+
+    function renderPractice(){
+      pCount.textContent = `${practiceIdx+1} / ${article.vocab.length}`;
+      const item = makePracticeItem(practiceIdx);
+      const v = article.vocab[practiceIdx];
+
+      practiceExample.innerHTML = item.sentence;
+
+      practiceOpts.innerHTML = item.options.map((opt,i)=>`
+        <button type="button" class="opt-practice"
+          data-psel="${encodeURIComponent(opt)}"
+          data-pcor="${encodeURIComponent(item.answer)}">
+          <span>${opt}</span>
+          <span class="opt-tag">Option ${i+1}</span>
+        </button>
+      `).join("");
+
+      practiceFb.style.display = "none";
+      practiceFb.className = "reveal";
+
+      if (practiceAnswered[practiceIdx]){
+        const { correct, correctText } = practiceAnswered[practiceIdx];
+        practiceFb.style.display = "block";
+        practiceFb.className = `reveal ${correct ? "fb-good" : "fb-bad"}`;
+        practiceFb.textContent = correct ? `✓ ${v.t} — ${v.d}` : `✗ Incorrect — correct: ${correctText}. ${v.d}`;
+        practiceOpts.querySelectorAll("button").forEach(b=>b.disabled = true);
+      }
+    }
+
+    practiceOpts.addEventListener("click", (e)=>{
+      const btn = e.target.closest("button[data-psel]");
+      if (!btn) return;
+
+      const selected = decodeURIComponent(btn.dataset.psel);
+      const correct = decodeURIComponent(btn.dataset.pcor);
+      const v = article.vocab[practiceIdx];
+
+      const ok = selected === correct;
+      practiceAnswered[practiceIdx] = { correct: ok, correctText: correct };
+
+      practiceFb.style.display = "block";
+      practiceFb.className = `reveal ${ok ? "fb-good" : "fb-bad"}`;
+      practiceFb.textContent = ok ? `✓ ${v.t} — ${v.d}` : `✗ Incorrect — correct: ${v.t}. ${v.d}`;
+
+      practiceOpts.querySelectorAll("button").forEach(b=>b.disabled = true);
+    });
+
+    pNext.addEventListener("click", ()=>{
+      practiceIdx = Math.min(article.vocab.length-1, practiceIdx+1);
+      renderPractice();
+    });
+    pPrev.addEventListener("click", ()=>{
+      practiceIdx = Math.max(0, practiceIdx-1);
+      renderPractice();
+    });
+    pReset.addEventListener("click", ()=>{
+      delete practiceAnswered[practiceIdx];
+      renderPractice();
+    });
+    pResetAll.addEventListener("click", ()=>{
+      practiceAnswered = new Array(article.vocab.length).fill(null);
+      practiceIdx = 0;
+      renderPractice();
+    });
+
+    // ---------- Grammar rewrite (per sentence check + reveal) ----------
+    function norm(s){
+      return (s||"").toLowerCase().replace(/\s+/g," ").replace(/[.,!?]/g,"").trim();
+    }
+
+    function renderRewrite(){
+      rewriteAnswers = new Array(article.rewritePassive.length).fill("");
+
+      rewriteList.innerHTML = article.rewritePassive.map((t,i)=>`
+        <div class="row">
+          <div class="mini-header mb-2">Active sentence ${i+1}</div>
+          <div class="a">${highlightAll(t.active)}</div>
+
+          <div class="mini-header mt-3 mb-2">Write the passive sentence</div>
+          <textarea data-ri="${i}" placeholder="Type your passive sentence here..."></textarea>
+
+          <div class="flex flex-wrap gap-2 mt-3">
+            <button class="nav-btn active" data-check-one="${i}">Check</button>
+            <button class="nav-btn" data-reveal-one="${i}">Reveal</button>
+            <button class="nav-btn" data-reset-one="${i}">Reset</button>
+          </div>
+
+          <div id="r-fb-${i}" class="reveal"></div>
+
+          <div id="r-sol-${i}" class="sol mono fb-good">
+            <div style="font-family:var(--mono); font-weight:900;">Solution:</div>
+            <div>${highlightAll(t.passive)}</div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    rewriteList.addEventListener("input", (e)=>{
+      const ta = e.target.closest("textarea[data-ri]");
+      if (!ta) return;
+      const i = parseInt(ta.dataset.ri,10);
+      rewriteAnswers[i] = ta.value;
+      const fb = document.getElementById(`r-fb-${i}`);
+      if (fb) fb.style.display = "none";
+    });
+
+    rewriteList.addEventListener("click", (e)=>{
+      const checkBtn = e.target.closest("button[data-check-one]");
+      const revealBtn = e.target.closest("button[data-reveal-one]");
+      const resetBtn = e.target.closest("button[data-reset-one]");
+
+      if (checkBtn){
+        const i = parseInt(checkBtn.getAttribute("data-check-one"), 10);
+        const user = norm(rewriteAnswers[i]);
+        const model = norm(article.rewritePassive[i].passive);
+
+        const ok = user === model || (user.includes("was") || user.includes("were"));
+        const fb = document.getElementById(`r-fb-${i}`);
+        fb.style.display = "block";
+        fb.className = `reveal ${ok ? "fb-good" : "fb-bad"}`;
+        fb.textContent = ok ? "✓ Looks good" : "✗ Not correct — click Reveal to compare";
+        return;
+      }
+
+      if (revealBtn){
+        const i = parseInt(revealBtn.getAttribute("data-reveal-one"), 10);
+        const sol = document.getElementById(`r-sol-${i}`);
+        sol.style.display = (sol.style.display === "block") ? "none" : "block";
+        return;
+      }
+
+      if (resetBtn){
+        const i = parseInt(resetBtn.getAttribute("data-reset-one"), 10);
+        rewriteAnswers[i] = "";
+        const ta = rewriteList.querySelector(`textarea[data-ri="${i}"]`);
+        if (ta) ta.value = "";
+        const fb = document.getElementById(`r-fb-${i}`);
+        if (fb) fb.style.display = "none";
+        const sol = document.getElementById(`r-sol-${i}`);
+        if (sol) sol.style.display = "none";
+        return;
+      }
+    });
+
+    grRevealAll.addEventListener("click", ()=>{
+      article.rewritePassive.forEach((t,i)=>{
+        const sol = document.getElementById(`r-sol-${i}`);
+        if (sol) sol.style.display = "block";
+      });
+    });
+
+    grReset.addEventListener("click", ()=>{
+      renderRewrite();
+    });
+
+    // ---------- Decisions ----------
+    function renderDecisions(){
+      decisionSelections = new Array(article.decisions.length).fill(null);
+
+      decisionsGrid.innerHTML = article.decisions.map((sim,si)=>`
+        <div class="decision-card" data-decision="${si}">
+          <div class="decision-head">
+            <div>
+              <div class="font-black text-slate-900 text-xl">${sim.title}</div>
+              <div class="decision-context">${sim.context}</div>
+            </div>
+            <span class="pill pill-orange">Decision</span>
+          </div>
+
+          <div class="problem-box">
+            <div class="lbl">Problem</div>
+            <div class="txt">${highlightAll(sim.q)}</div>
+          </div>
+
+          <div class="choices-box">
+            <div class="lbl">Choose a solution (change anytime)</div>
+            <div class="space-y-2">
+              ${sim.choices.map((c,ci)=>`
+                <button type="button" class="opt" data-si="${si}" data-ci="${ci}">
+                  ${highlightAll(c.text)}
+                </button>
+              `).join("")}
+            </div>
+          </div>
+
+          <div id="dfb-${si}" class="reveal"></div>
+
+          <div class="explain-box">
+            <div class="lbl">Explain</div>
+            <div class="q">${highlightAll(sim.revealQ)}</div>
+            <button type="button" class="nav-btn active mt-3" data-reveal="${si}">Reveal Model Answer</button>
+            <div id="dans-${si}" class="reveal fb-good mt-2">${highlightAll(sim.revealA)}</div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    decisionsGrid.addEventListener("click", (e)=>{
+      const choiceBtn = e.target.closest("button[data-si][data-ci]");
+      if (choiceBtn){
+        const si = parseInt(choiceBtn.dataset.si,10);
+        const ci = parseInt(choiceBtn.dataset.ci,10);
+        const sim = article.decisions[si];
+        const c = sim.choices[ci];
+
+        decisionSelections[si] = ci;
+
+        const card = choiceBtn.closest(".decision-card");
+        card.querySelectorAll("button.opt[data-si]").forEach(b=>b.classList.remove("selected"));
+        choiceBtn.classList.add("selected");
+
+        const fb = document.getElementById(`dfb-${si}`);
+        fb.style.display = "block";
+        fb.className = `reveal ${c.correct ? "fb-good" : "fb-bad"}`;
+        fb.textContent = c.correct ? `✓ Correct: ${c.fb}` : `✗ Not best: ${c.fb}`;
+        return;
+      }
+
+      const revealBtn = e.target.closest("button[data-reveal]");
+      if (revealBtn){
+        const si = parseInt(revealBtn.dataset.reveal,10);
+        const ans = document.getElementById(`dans-${si}`);
+        ans.style.display = (ans.style.display === "block") ? "none" : "block";
+      }
+    });
+
+    // ---------- Final Test ----------
+    function renderFinal(){
+      tCount.textContent = `${testIdx+1} / ${article.finalTest.length}`;
+      const item = article.finalTest[testIdx];
+
+      finalQ.innerHTML = highlightAll(item.q);
+
+      finalOpts.innerHTML = shuffle(item.o).map(opt=>`
+        <button type="button" class="opt" data-tsel="${encodeURIComponent(opt)}" data-tcor="${encodeURIComponent(item.a)}">
+          ${highlightAll(opt)}
+        </button>
+      `).join("");
+
+      finalFb.style.display = "none";
+      finalFb.className = "reveal";
+      const saved = testSelections[testIdx];
+      if (saved?.selected){
+        finalOpts.querySelectorAll("button.opt").forEach(b=>{
+          if (decodeURIComponent(b.dataset.tsel) === saved.selected) b.classList.add("selected");
+        });
+        finalFb.style.display = "block";
+        finalFb.className = `reveal ${saved.correct ? "fb-good" : "fb-bad"}`;
+        finalFb.textContent = saved.correct ? "✓ Correct" : `✗ Incorrect — correct: ${saved.correctText}`;
+      }
+    }
+
+    finalOpts.addEventListener("click", (e)=>{
+      const btn = e.target.closest("button[data-tsel]");
+      if (!btn) return;
+
+      finalOpts.querySelectorAll("button.opt").forEach(b=>b.classList.remove("selected"));
+      btn.classList.add("selected");
+
+      const selected = decodeURIComponent(btn.dataset.tsel);
+      const correct = decodeURIComponent(btn.dataset.tcor);
+      const ok = selected === correct;
+
+      testSelections[testIdx] = { selected, correct: ok, correctText: correct };
+
+      finalFb.style.display = "block";
+      finalFb.className = `reveal ${ok ? "fb-good" : "fb-bad"}`;
+      finalFb.textContent = ok ? "✓ Correct" : `✗ Incorrect — correct: ${correct}`;
+    });
+
+    tNext.addEventListener("click", ()=>{
+      testIdx = Math.min(article.finalTest.length-1, testIdx+1);
+      renderFinal();
+    });
+    tPrev.addEventListener("click", ()=>{
+      testIdx = Math.max(0, testIdx-1);
+      renderFinal();
+    });
+    tReset.addEventListener("click", ()=>{
+      delete testSelections[testIdx];
+      renderFinal();
+    });
+    tResetAll.addEventListener("click", ()=>{
+      testSelections = new Array(article.finalTest.length).fill(null);
+      testIdx = 0;
+      renderFinal();
+    });
+
+    // ---------- Flashcards ----------
+    flash.addEventListener("click", ()=> flash.classList.toggle("flipped"));
+    btnNext.addEventListener("click", ()=>{
+      vocabIdx = (vocabIdx + 1) % article.vocab.length;
+      renderFlashcard();
+    });
+    btnPrev.addEventListener("click", ()=>{
+      vocabIdx = (vocabIdx - 1 + article.vocab.length) % article.vocab.length;
+      renderFlashcard();
+    });
+    btnReset.addEventListener("click", ()=>{
+      vocabIdx = 0;
+      renderFlashcard();
+    });
+
+    // ---------- Init ----------
+    function init(){
+      renderArticle();
+      renderSummary();
+
+      vocabIdx = 0;
+      renderFlashcard();
+
+      practiceIdx = 0;
+      practiceAnswered = new Array(article.vocab.length).fill(null);
+      renderPractice();
+
+      renderRewrite();
+
+      renderDecisions();
+
+      testIdx = 0;
+      testSelections = new Array(article.finalTest.length).fill(null);
+      renderFinal();
+
+      showPane("article");
+    }
+    init();
+  </script>
+</body>
+</html>
