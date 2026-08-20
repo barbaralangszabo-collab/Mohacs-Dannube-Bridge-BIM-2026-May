@@ -524,26 +524,57 @@
 
   <script>
     // ---------- Highlight helpers ----------
+    // Keyword terms (highlighted orange/.kw). Matching is plural- and hyphen-flexible,
+    // so "span" also catches "spans", "box section" also catches "box-sections", etc.
     const KEYWORDS = [
       "arch bridge","stiffening girder","orthotropic deck","network hanger","box section","box girder","cross-bracing",
-      "navigation channel","floodplain","parametric design","Grasshopper","Rhino","Tekla","clash detection","launching nose",
-      "temporary support tower","corrosion protection","assembly unit","fabrication unit","BIM","span"
+      "navigation channel","floodplain","parametric design","Grasshopper","Rhino","Tekla Structures","Tekla","clash detection",
+      "launching nose","temporary support tower","corrosion protection","assembly unit","fabrication unit","BIM","span"
     ];
+    // Passive-voice verbs to highlight (blue/.ph) wherever they follow "was"/"were",
+    // e.g. "was designed", "were modelled", "was carried out".
+    const PASSIVE_VERBS = [
+      "designed","modelled","developed","repositioned","carried out",
+      "exported","used","verified","divided","distributed"
+    ];
+    // Extra fixed phrases (blue/.ph) not tied to the was/were pattern above.
     const PHRASES = [
-      "was designed","was modelled","was developed","was assembled","was integrated","was repositioned","was carried out","was exported"
+      "network hanger system","structural steel"
     ];
     function escapeRE(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+    // Turns "box section" into a pattern that also matches "box-section(s)",
+    // "box  section", "box sectioned", etc. — spaces/hyphens are interchangeable
+    // and a trailing plural/participle suffix is optional.
+    function flexPattern(term){
+      const esc = escapeRE(term).replace(/[-\s]+/g, "[-\\s]+");
+      return `${esc}(?:es|ed|d|s)?`;
+    }
+    // Single-pass highlighter: every keyword/phrase/passive-verb pattern is combined
+    // into ONE regex and matched against the ORIGINAL (untagged) text in one sweep.
+    // This matters because a short keyword like "span" is also a substring of the
+    // <span> tags this function inserts — running separate sequential .replace()
+    // passes would let a later pass match text *inside* an already-inserted tag
+    // and corrupt the markup. One pass avoids that entirely, and length-first
+    // ordering makes longer terms (e.g. "Tekla Structures") win over short ones
+    // ("Tekla") when both could match at the same spot.
+    function buildHighlightSpecs(){
+      const specs = [];
+      KEYWORDS.forEach(k => specs.push({ re: flexPattern(k), cls: "kw", len: k.length }));
+      PASSIVE_VERBS.forEach(v => specs.push({ re: `(?:was|were)\\s+${flexPattern(v)}`, cls: "ph", len: v.length + 5 }));
+      PHRASES.forEach(p => specs.push({ re: flexPattern(p), cls: "ph", len: p.length }));
+      specs.sort((a,b)=> b.len - a.len);
+      return specs;
+    }
+    const HL_SPECS = buildHighlightSpecs();
+    const HL_REGEX = new RegExp(`\\b(?:${HL_SPECS.map(s=>`(${s.re})`).join("|")})\\b`, "gi");
+
     function highlightAll(html){
-      let out = html;
-      [...KEYWORDS].sort((a,b)=>b.length-a.length).forEach(k=>{
-        const re = new RegExp(`\\b${escapeRE(k)}\\b`, "gi");
-        out = out.replace(re, (m)=>`<span class="kw">${m}</span>`);
+      return html.replace(HL_REGEX, (match, ...rest) => {
+        const groups = rest.slice(0, HL_SPECS.length);
+        const idx = groups.findIndex(g => g !== undefined);
+        const cls = idx >= 0 ? HL_SPECS[idx].cls : "kw";
+        return `<span class="${cls}">${match}</span>`;
       });
-      [...PHRASES].sort((a,b)=>b.length-a.length).forEach(p=>{
-        const re = new RegExp(`\\b${escapeRE(p)}\\b`, "gi");
-        out = out.replace(re, (m)=>`<span class="ph">${m}</span>`);
-      });
-      return out;
     }
     function shuffle(arr){
       return arr.map(v=>({v,r:Math.random()})).sort((a,b)=>a.r-b.r).map(x=>x.v);
@@ -822,7 +853,7 @@
     function renderFlashcard(){
       const item = article.vocab[vocabIdx];
       cardTerm.textContent = item.t;
-      cardDef.innerHTML = `${item.d}<br><br><span class="ph">Example:</span> ${item.ex}`;
+      cardDef.innerHTML = `${highlightAll(item.d)}<br><br><span class="ph">Example:</span> ${highlightAll(item.ex)}`;
       progress.textContent = `Term ${vocabIdx+1} / ${article.vocab.length}`;
       flash.classList.remove("flipped");
     }
